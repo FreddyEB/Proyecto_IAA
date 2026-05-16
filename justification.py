@@ -4,7 +4,9 @@ Produces a short Spanish text explaining why a candidate is recommended,
 highlighting the 2-3 most influential factors in their score.
 """
 
-from scoring import W_NOTA, W_EXP, W_PROM, W_CARGA, MAX_GRADE, MIN_PASSING_GRADE
+from scoring import MIN_PASSING_GRADE
+
+MAX_GRADE = 7.0
 
 
 def _nota_label(nota: float) -> str:
@@ -37,12 +39,13 @@ def generate(row: dict, course_name: str = "") -> str:
     carga = int(row["CARGA_ACTUAL"])
     score = float(row["SCORE"])
 
-    # Compute normalized contributions to rank factors
+    # Rank factors by their normalized contribution (using model-learned importances as proxy)
+    # Approximate importances: nota > experiencia > promedio > carga
     contributions = {
-        "nota": W_NOTA * (nota / MAX_GRADE),
-        "experiencia": W_EXP * (exp / max(exp, 1)),  # relative, not absolute
-        "promedio": W_PROM * (prom / MAX_GRADE),
-        "carga": W_CARGA * (1 - carga / 10),
+        "nota": 0.35 * (nota / MAX_GRADE),
+        "experiencia": 0.20 * (exp / max(exp, 1)),
+        "promedio": 0.10 * (prom / MAX_GRADE),
+        "carga": 0.05 * (1 - carga / 10),
     }
     top_factors = sorted(contributions, key=contributions.get, reverse=True)[:3]
 
