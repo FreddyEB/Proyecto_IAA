@@ -1,7 +1,5 @@
 """
-Rule-based natural language justification generator.
-Produces a short Spanish text explaining why a candidate is recommended,
-highlighting the 2-3 most influential factors in their score.
+Hace un pequeño resumen para justificar la selección del candidato 
 """
 
 from scoring import MIN_PASSING_GRADE
@@ -29,8 +27,7 @@ def _carga_label(carga: int) -> str:
 
 def generate(row: dict, course_name: str = "") -> str:
     """
-    row: dict with keys RUT, NOTA_CURSO, EXPERIENCIA, PROMEDIO, CARGA_ACTUAL, SCORE
-    Returns a 2-3 sentence justification in Spanish.
+    Genera una justificación basada en los factores más relevantes para la selección del candidato.
     """
     rut = row["RUT"]
     nota = float(row["NOTA_CURSO"])
@@ -51,7 +48,7 @@ def generate(row: dict, course_name: str = "") -> str:
 
     parts = []
 
-    # Always mention the course grade (most critical factor)
+    # siempre mencionar el resultado académico del curso específico
     course_ref = f" en {course_name}" if course_name else ""
     parts.append(
         f"Obtuvo nota {nota:.1f}{course_ref} ({_nota_label(nota)}), "

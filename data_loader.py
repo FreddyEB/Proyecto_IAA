@@ -11,7 +11,7 @@ def _find_csv(pattern: str) -> Path:
 
 
 def load_postulaciones() -> pd.DataFrame:
-    """Candidates who applied. Keeps all states for experience counting."""
+    """Candidatos"""
     df = pd.read_csv(_find_csv("reportePostulaciones"))
     df["RUT"] = df["RUT"].astype(str).str.strip()
     df["NRC"] = df["NRC"].astype(str).str.strip()
@@ -19,18 +19,18 @@ def load_postulaciones() -> pd.DataFrame:
 
 
 def load_notas() -> pd.DataFrame:
-    """RA311 — full academic history with grades per course."""
+    """RA311 historial académico"""
     df = pd.read_csv(_find_csv("RA311"))
     df["RUT"] = df["RUT"].astype(str).str.strip()
     df["NOTA"] = pd.to_numeric(df["NOTA"], errors="coerce")
     df["MATERIA"] = df["MATERIA"].astype(str).str.strip()
-    # Normalize CURSO: RA311 stores as float (1100.0) → "1100"
+    # Normalize CURSO: RA311 stores as float
     df["CURSO"] = df["CURSO"].apply(lambda x: str(int(float(x))) if pd.notna(x) and str(x).strip() not in ("", "nan") else "")
     return df[df["NOTA"].notna()]
 
 
 def load_promedios() -> pd.DataFrame:
-    """UG305 — cumulative GPA per student."""
+    """UG305 GPA de cada alumno"""
     df = pd.read_csv(_find_csv("UG305"))
     df["RUT"] = df["RUT"].astype(str).str.strip()
     # Grades use comma as decimal separator
@@ -42,7 +42,7 @@ def load_promedios() -> pd.DataFrame:
 
 
 def load_carga() -> pd.DataFrame:
-    """UG307 — enrolled courses this period (used to compute academic load)."""
+    """UG307 cursos inscritos"""
     df = pd.read_csv(_find_csv("UG307"))
     df["RUT"] = df["RUT"].astype(str).str.strip()
     carga = df.groupby("RUT")["NRC"].count().reset_index()
@@ -51,7 +51,7 @@ def load_carga() -> pd.DataFrame:
 
 
 def load_horarios() -> pd.DataFrame:
-    """UG201 — NRC schedule (4 header rows before real data)."""
+    """UG201 horarios del semestre"""
     df = pd.read_csv(_find_csv("UG201"), skiprows=4)
     df.columns = df.columns.str.strip()
     df["NRC"] = df["NRC"].astype(str).str.strip()

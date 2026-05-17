@@ -1,11 +1,11 @@
 """
-Random Forest model for teaching assistant recommendation.
+Random Forest model.
 
-Label: 1 = Aceptado, 0 = Rechazado (from historical postulaciones)
+Label: 
+1 = Aceptado 
+0 = Rechazado
+
 Features: NOTA_CURSO, PROMEDIO, CARGA_ACTUAL, EXPERIENCIA, TIPO_NUM
-
-The model replaces the fixed linear weights with learned probabilities.
-predict_proba(X)[:,1] is used as the candidate score.
 """
 
 import pandas as pd
@@ -30,9 +30,16 @@ def build_training_data(
     promedios: pd.DataFrame,
     carga: pd.DataFrame,
 ) -> pd.DataFrame:
+    
     """
-    Joins historical postulaciones (Aceptado/Rechazado) with academic features.
-    Returns a DataFrame with FEATURES + 'label' column.
+    Une las postulaciones historicas (Aceptado/Rechazado) con las features academicas.
+     Devuelve un DataFrame listo para entrenar el modelo, con columnas FEATURES + "label".
+     Solo incluye filas con label conocido (Aprobado/Rechazado).
+     Si hay múltiples notas para el mismo RUT+MATERIA+CURSO, se queda con la mejor.
+     Asume que postulaciones tiene columnas: RUT, Curso, Materia, Estado (Aceptado/Rechazado), Tipo de ayudante.
+     Asume que notas tiene columnas: RUT, MATERIA, CURSO, NOTA.
+     Asume que promedios tiene columnas: RUT, PROMEDIO  GENERAL  ACUMULADO.
+     Asume que carga tiene columnas: RUT, CARGA_ACTUAL.
     """
     labeled = postulaciones[postulaciones["Estado"].isin(["Aceptado", "Rechazado"])].copy()
     labeled["label"] = (labeled["Estado"] == "Aceptado").astype(int)
@@ -82,8 +89,8 @@ def build_training_data(
 
 def train(training_data: pd.DataFrame) -> tuple[RandomForestClassifier, dict]:
     """
-    Trains a Random Forest on the training data.
-    Returns (model, metrics_dict).
+    Random Forest con la data de entrenamiento (data de 2026-01)
+    Return(model, metrics_dict)
     """
     X = training_data[FEATURES].values
     y = training_data["label"].values
@@ -124,10 +131,6 @@ def predict_scores(
     model: RandomForestClassifier,
     candidates: pd.DataFrame,
 ) -> pd.Series:
-    """
-    Returns P(Aceptado) for each row in candidates.
-    candidates must have all FEATURES columns (NaN → 0).
-    """
     X = candidates[FEATURES].fillna(0).values
     return pd.Series(
         model.predict_proba(X)[:, 1],

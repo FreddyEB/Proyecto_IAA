@@ -1,9 +1,9 @@
 """
-Scoring engine for teaching assistant recommendations.
+Motor de Scoring.
 
-Hard filters (applied before scoring):
-  1. Candidate must have passed the course (NOTA >= MIN_PASSING_GRADE in RA311)
-  2. No schedule conflict between candidate's enrolled courses and the target NRC
+Filtros duros/base:
+  1. El candidato debe haber aprobado el curso (NOTA >= MIN_PASSING_GRADE in RA311)
+  2. No debe haber conflicto de horario entre los ramos inscritos por el candidato y el NRC objetivo (sino se descarta)
 
 Score = P(Aceptado) from a trained Random Forest model.
 """
@@ -63,8 +63,8 @@ def rank_candidates(
     top_n: int = 5,
 ) -> pd.DataFrame:
     """
-    Returns ranked DataFrame of top_n candidates for target_nrc.
-    Score = P(Aceptado) from the Random Forest model.
+    Retorna un DF con los candidatos top para el target_nrc.
+    Score = P(Aceptado) del modelo Random Forest.
     """
     nrc_info = horarios[horarios["NRC"] == target_nrc]
     if nrc_info.empty:
@@ -77,7 +77,7 @@ def rank_candidates(
     except (ValueError, TypeError):
         curso = str(raw_curso).strip()
 
-    # Candidates with active postulations
+    # Candidatos con postulaciones activas
     cands_post = postulaciones[
         (postulaciones["NRC"] == target_nrc) &
         (postulaciones["Estado"].isin(["Pendiente", "Aceptado"]))
@@ -92,7 +92,7 @@ def rank_candidates(
         .groupby("RUT").size().reset_index(name="EXPERIENCIA")
     )
 
-    # Best grade for this course
+    # Mejor nota para este curso
     course_grades = (
         notas[(notas["MATERIA"] == materia) & (notas["CURSO"] == curso)]
         [["RUT", "NOTA"]].sort_values("NOTA", ascending=False)
@@ -100,7 +100,7 @@ def rank_candidates(
         .rename(columns={"NOTA": "NOTA_CURSO"})
     )
 
-    # Schedule conflict check
+    # Conflicto horario
     schedule_map = _build_schedule_map(horarios)
     target_sched = schedule_map.get(target_nrc, {})
     ug307 = ug307.copy()
@@ -115,7 +115,7 @@ def rank_candidates(
                 merged.setdefault(day, []).extend(blocks)
         return merged
 
-    # Build feature matrix
+    # feature matrix
     df = cands_post.copy()
     df = df.merge(course_grades, on="RUT", how="left")
     df = df.merge(exp_counts, on="RUT", how="left")
@@ -127,7 +127,7 @@ def rank_candidates(
     df["PROMEDIO"] = df["PROMEDIO  GENERAL  ACUMULADO"].fillna(0)
     df["CARGA_ACTUAL"] = df["CARGA_ACTUAL"].fillna(0)
 
-    # Encode tipo (must match training encoding — use same category order)
+    # Encode tipo de ayudante
     from sklearn.preprocessing import LabelEncoder
     le = LabelEncoder()
     le.fit(["Corrector", "Coordinador Tipo 1", "Coordinador Tipo 2",
@@ -136,7 +136,7 @@ def rank_candidates(
         lambda x: le.transform([x])[0] if x in le.classes_ else 0
     )
 
-    # Hard filters
+    # Filtros duros/base
     df["FILTRO_NOTA"] = df["NOTA_CURSO"] >= MIN_PASSING_GRADE
     df["FILTRO_HORARIO"] = ~df["RUT"].apply(
         lambda r: _has_schedule_conflict(get_cand_sched(r), target_sched)
@@ -149,7 +149,7 @@ def rank_candidates(
         return df[["RUT", "NOTA_CURSO", "EXPERIENCIA", "PROMEDIO", "CARGA_ACTUAL",
                     "SCORE", "FILTRO_NOTA", "FILTRO_HORARIO"]].sort_values("NOTA_CURSO", ascending=False)
 
-    # Score = P(Aceptado) from Random Forest
+    # Score = P(Aceptado) del Random Forest
     from model import predict_scores, FEATURES
     eligible["SCORE"] = predict_scores(model, eligible).round(4)
 

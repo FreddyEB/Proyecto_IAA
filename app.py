@@ -69,7 +69,7 @@ def get_retrospective():
     return tca, ranking_acc
 
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.title("Configuración")
     st.markdown("---")
@@ -109,7 +109,7 @@ with st.sidebar:
     st.caption("Grupo 13 · IA Aplicada 2026-01")
 
 
-# ── Main content ──────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────
 st.title("Sistema de Recomendación de Ayudantes")
 st.markdown(f"**Curso seleccionado:** `{selected_label}`")
 
@@ -128,7 +128,7 @@ col3.metric("Horario", " | ".join(schedule_parts) if schedule_parts else "Sin ho
 
 st.markdown("---")
 
-# ── Feature importances ───────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────
 st.subheader("Importancia de variables (Random Forest)")
 fi = metrics["feature_importances"]
 fi_df = pd.DataFrame({
@@ -139,7 +139,7 @@ st.bar_chart(fi_df.set_index("Variable"))
 
 st.markdown("---")
 
-# ── KPI metrics ───────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────
 st.subheader("Indicadores del proceso (KPI)")
 
 with st.spinner("Calculando recomendaciones…"):
@@ -170,7 +170,7 @@ k4.metric("Candidatos elegibles", len(eligible))
 
 st.markdown("---")
 
-# ── Ranking table ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
 st.subheader(f"Top {top_n} candidatos recomendados")
 
 if ranking.empty:
@@ -203,7 +203,7 @@ st.dataframe(
     use_container_width=True,
 )
 
-# ── Candidate cards ───────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────
 st.markdown("---")
 st.subheader("Detalle por candidato")
 
@@ -217,7 +217,7 @@ for rank, row in eligible_ranking.iterrows():
         st.markdown("**Justificación:**")
         st.info(row["JUSTIFICACIÓN"])
 
-# ── Retrospective analysis ────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────
 st.markdown("---")
 st.subheader("📈 Análisis retrospectivo (validación del modelo)")
 
@@ -246,7 +246,7 @@ a3.metric("Aceptado en Top-3", f"{rank_acc['top3_rate_pct']}%",
 with st.expander("Ver detalle por NRC"):
     st.dataframe(rank_acc["details"], use_container_width=True)
 
-# ── Export ────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────────
 st.markdown("---")
 st.subheader("Exportar resultados")
 
