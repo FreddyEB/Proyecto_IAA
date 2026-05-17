@@ -15,6 +15,7 @@ from data_loader import load_all, _find_csv
 from model import build_training_data, train, FEATURE_LABELS
 from scoring import rank_candidates, MIN_PASSING_GRADE
 from justification import generate as generate_justification
+from analysis import compute_tca_real, compute_ranking_accuracy
 
 st.set_page_config(
     page_title="Recomendación de Ayudantes",
@@ -53,6 +54,19 @@ def get_ranking(nrc: str, top_n: int):
         model=model,
         top_n=top_n,
     )
+
+
+@st.cache_data(show_spinner="Calculando análisis retrospectivo…")
+def get_retrospective():
+    data = get_data()
+    model, _ = get_model()
+    ug307 = pd.read_csv(_find_csv("UG307"))
+    tca = compute_tca_real(data["postulaciones"], data["notas"])
+    ranking_acc = compute_ranking_accuracy(
+        data["postulaciones"], data["notas"], data["promedios"],
+        data["carga"], data["horarios"], ug307, model,
+    )
+    return tca, ranking_acc
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -203,6 +217,35 @@ for rank, row in eligible_ranking.iterrows():
         st.markdown("**Justificación:**")
         st.info(row["JUSTIFICACIÓN"])
 
+# ── Retrospective analysis ────────────────────────────────────────────────────
+st.markdown("---")
+st.subheader("📈 Análisis retrospectivo (validación del modelo)")
+
+tca_data, rank_acc = get_retrospective()
+
+st.markdown("#### TCA — Compatibilidad Académica histórica")
+r1, r2, r3 = st.columns(3)
+r1.metric("TCA real (histórico)", f"{tca_data['tca_real_pct']}%",
+          delta=f"{tca_data['tca_real_pct'] - tca_data['tca_baseline_pct']:+.1f}% vs línea base")
+r2.metric("Línea base estimada", f"{tca_data['tca_baseline_pct']}%")
+r3.metric("Objetivo MVP", f"{tca_data['tca_objetivo_pct']}%")
+
+st.caption(
+    f"Calculado sobre {tca_data['total_aceptados']} asignaciones históricas con estado Aceptado. "
+    f"{tca_data['con_nota_en_ra311']} de ellas tienen nota registrada en RA311."
+)
+
+st.markdown("#### Tasa de aceptación del ranking")
+a1, a2, a3 = st.columns(3)
+a1.metric("NRCs evaluados", rank_acc["nrcs_evaluados"])
+a2.metric("Top-1 correcto", f"{rank_acc['top1_rate_pct']}%",
+          help="% de NRCs donde el candidato #1 del modelo coincide con el Aceptado real")
+a3.metric("Aceptado en Top-3", f"{rank_acc['top3_rate_pct']}%",
+          help="% de NRCs donde el candidato aceptado aparece entre los 3 primeros del ranking")
+
+with st.expander("Ver detalle por NRC"):
+    st.dataframe(rank_acc["details"], use_container_width=True)
+
 # ── Export ────────────────────────────────────────────────────────────────────
 st.markdown("---")
 st.subheader("Exportar resultados")
@@ -230,6 +273,14 @@ with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
         "Importancia": list(fi.values()),
     }).sort_values("Importancia", ascending=False)
     fi_export.to_excel(writer, index=False, sheet_name="Feature Importances")
+    retro_summary = pd.DataFrame({
+        "Métrica": ["TCA real (%)", "TCA línea base (%)", "TCA objetivo (%)",
+                    "Top-1 match (%)", "Top-3 match (%)", "NRCs evaluados"],
+        "Valor": [tca_data["tca_real_pct"], tca_data["tca_baseline_pct"], tca_data["tca_objetivo_pct"],
+                  rank_acc["top1_rate_pct"], rank_acc["top3_rate_pct"], rank_acc["nrcs_evaluados"]],
+    })
+    retro_summary.to_excel(writer, index=False, sheet_name="Análisis Retrospectivo")
+    rank_acc["details"].to_excel(writer, index=False, sheet_name="Detalle por NRC")
 
 st.download_button(
     label="Descargar Excel",

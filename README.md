@@ -191,3 +191,5 @@ scikit-learn==1.5.0
 | 2026-05-15 | Reemplazo del scoring lineal por modelo Random Forest (`model.py`). Score = P(Aceptado). Métricas de CV y feature importances visibles en la app. |
 | 2026-05-15 | Creación de este documento (`README.md`) |
 | 2026-05-17 | Creación de guía de presentación (`PRESENTACION.md`) |
+| 2026-05-17 | Implementación de análisis retrospectivo (`analysis.py`). TCA real=61.7%, Top-1 match=83.5%, Top-3 match=96.5% sobre 85 NRCs históricos. Sección visible en la app y exportada al Excel. |
+| 2026-05-17 | Guía de presentación reescrita para formato 7 min + 10 min preguntas (`PRESENTACION.md`) |

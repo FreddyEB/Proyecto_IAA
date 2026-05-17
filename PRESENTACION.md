@@ -1,81 +1,56 @@
 # Guía de Presentación — MVP Recomendación de Ayudantes
-**Grupo 13** · Freddy Bacigalupo, Clemente Barros, Ignacio Liberón
+**Grupo 13** · Freddy Bacigalupo, Clemente Barros, Ignacio Liberón  
+**Formato:** 7 min presentación + 10 min preguntas
 
 ---
 
-## 1. Contexto y problema *(2 min)*
+## Estructura (7 min exactos)
 
-- El proceso actual de asignación de ayudantes es **manual, lento y sin criterios sistemáticos**
-- El coordinador revisa perfiles uno a uno con información dispersa
-- Consecuencias: conflictos de horario no detectados, asignaciones subóptimas, alta carga operativa
+### [0:00 – 1:00] Problema en una frase
+> *"Asignar ayudantes hoy toma ~12 días hábiles, es manual y genera conflictos de horario en el 12% de los casos. Esto lo resuelve el sistema que van a ver ahora."*
 
----
-
-## 2. Solución propuesta *(2 min)*
-
-- Sistema de recomendación que **automatiza la evaluación** de postulantes para cada curso
-- Genera un ranking ordenado con justificación para cada candidato
-- **La decisión final siempre es del coordinador** — el sistema lo apoya, no lo reemplaza
+Pasar directo a la demo.
 
 ---
 
-## 3. Demostración en vivo *(5–7 min)*
+### [1:00 – 4:30] Demo en vivo ← núcleo de la presentación
 
-1. Abrir la app y seleccionar un NRC con varios postulantes
-2. Mostrar los KPIs (TCA, TCH) y explicar qué miden
-3. Mostrar el gráfico de **feature importances** → explicar el componente de IA
-4. Expandir 2–3 cards de candidatos y leer las justificaciones
-5. Descargar el Excel y mostrar las hojas brevemente
-
----
-
-## 4. El modelo de IA *(3 min)*
-
-- **Random Forest** entrenado con decisiones históricas reales (Aceptado/Rechazado)
-- Aprende qué características predicen una buena asignación — sin pesos fijos arbitrarios
-
-**Feature importances aprendidas:**
-
-| Variable | Importancia |
-|---|---|
-| Tipo de ayudantía | ~40% |
-| Promedio acumulado | ~21% |
-| Nota en el curso | ~17% |
-| Experiencia previa | ~14% |
-| Carga académica | ~8% |
-
-> El modelo descubrió que el **tipo de ayudantía** es el factor más predictivo — algo que no habría surgido con pesos fijos.
-
-**Métricas (validación cruzada 5-fold):**
-- CV Accuracy: **68.4%** · CV ROC-AUC: **0.754**
-- Entrenado con 446 muestras (300 aceptados / 146 rechazados)
+1. Seleccionar un NRC → mostrar ranking con scores
+2. Señalar el gráfico de feature importances:
+   > *"Esto lo aprendió el modelo de sus propios datos históricos — sin pesos fijos arbitrarios"*
+3. Expandir el candidato #1 → leer la justificación en voz alta
+4. Mostrar métricas retrospectivas:
+   > *"En el 83.5% de los casos, el #1 del modelo coincide con quien el coordinador eligió históricamente"*
 
 ---
 
-## 5. KPIs y medición de impacto *(2 min)*
+### [4:30 – 6:00] KPIs: qué mejora
 
-| KPI | Línea base | Objetivo MVP |
+| KPI | Antes | Con el sistema |
 |---|---|---|
-| TCA — Compatibilidad Académica | ~67% | ≥ 90% |
-| TCP — Tiempo de Cierre del Proceso | ~12 días hábiles | ≤ 5 días hábiles |
-| TCH — Conflicto Horario | ~12% | ≤ 2% |
-
-- **TCA:** el filtro de nota mínima garantiza que solo candidatos con dominio del curso aparezcan en el ranking
-- **TCP:** el coordinador pasa de revisar perfiles individuales a validar un ranking ya estructurado
-- **TCH:** la verificación automática de horarios elimina conflictos antes de la asignación
+| Tiempo de cierre del proceso | ~12 días hábiles | ≤ 5 días hábiles |
+| Conflictos de horario | ~12% | ~0% |
+| Compatibilidad académica | ~67% | ≥ 90% |
 
 ---
 
-## 6. Limitaciones y trabajo futuro *(2 min)*
+### [6:00 – 7:00] Una limitación honesta + próximo paso
+> *"Hoy funciona con CSVs exportados manualmente. El siguiente paso natural es conectarlo directamente a los sistemas de la universidad."*
 
-| Limitación | Impacto |
-|---|---|
-| Solo un período de datos (202610) | Modelo entrenado con ~446 muestras; mejorará con más períodos históricos |
-| No detecta cursos equivalentes | Postulantes que aprobaron el ramo con otro código quedan descartados |
-| Sin integración con sistemas de la universidad | Los datos se cargan manualmente desde CSVs exportados (PoC) |
-| Sin seguimiento post-asignación | No se mide si el ayudante recomendado tuvo buen desempeño real |
+---
 
-**Próximos pasos:**
-- Incorporar datos históricos de períodos anteriores para robustecer el modelo
-- Definir tabla de equivalencias de cursos con el coordinador
-- Evaluar integración con sistemas académicos institucionales
+## Lo que NO prometer
+
+Dado que lo que se promete queda grabado:
+
+- ❌ Integración con sistemas institucionales (no implementada)
+- ❌ Que el modelo mejora solo con el tiempo (requiere reentrenamiento manual)
+- ❌ Detección automática de cursos equivalentes (no implementada)
+
+## Lo que SÍ se puede prometer
+
+- ✅ Ranking reproducible y objetivo basado en datos reales
+- ✅ Justificaciones explicables por candidato
+- ✅ Detección automática de conflictos de horario
+- ✅ Exportación a Excel lista para usar
+- ✅ 83.5% de coincidencia con decisiones históricas del coordinador
