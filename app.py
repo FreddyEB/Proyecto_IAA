@@ -57,7 +57,7 @@ def get_ranking(nrc: str, top_n: int):
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.title("⚙️ Configuración")
+    st.title("Configuración")
     st.markdown("---")
 
     data = get_data()
@@ -85,7 +85,7 @@ with st.sidebar:
     top_n = st.slider("Candidatos a mostrar", 1, 10, 5)
 
     st.markdown("---")
-    st.markdown("### 🤖 Modelo Random Forest")
+    st.markdown("### Modelo Random Forest")
     st.markdown(f"- **Muestras de entrenamiento:** {metrics['n_samples']}")
     st.markdown(f"- **Aceptados / Rechazados:** {metrics['n_accepted']} / {metrics['n_rejected']}")
     st.markdown(f"- **CV Accuracy:** {metrics['cv_accuracy_mean']:.1%} ± {metrics['cv_accuracy_std']:.1%}")
@@ -96,7 +96,7 @@ with st.sidebar:
 
 
 # ── Main content ──────────────────────────────────────────────────────────────
-st.title("🎓 Sistema de Recomendación de Ayudantes")
+st.title("Sistema de Recomendación de Ayudantes")
 st.markdown(f"**Curso seleccionado:** `{selected_label}`")
 
 nrc_row = horarios[horarios["NRC"] == selected_nrc].iloc[0]
@@ -115,7 +115,7 @@ col3.metric("Horario", " | ".join(schedule_parts) if schedule_parts else "Sin ho
 st.markdown("---")
 
 # ── Feature importances ───────────────────────────────────────────────────────
-st.subheader("🧠 Importancia de variables (Random Forest)")
+st.subheader("Importancia de variables (Random Forest)")
 fi = metrics["feature_importances"]
 fi_df = pd.DataFrame({
     "Variable": [FEATURE_LABELS[k] for k in fi],
@@ -126,7 +126,7 @@ st.bar_chart(fi_df.set_index("Variable"))
 st.markdown("---")
 
 # ── KPI metrics ───────────────────────────────────────────────────────────────
-st.subheader("📊 Indicadores del proceso (KPI)")
+st.subheader("Indicadores del proceso (KPI)")
 
 with st.spinner("Calculando recomendaciones…"):
     ranking = get_ranking(selected_nrc, top_n)
@@ -157,7 +157,7 @@ k4.metric("Candidatos elegibles", len(eligible))
 st.markdown("---")
 
 # ── Ranking table ─────────────────────────────────────────────────────────────
-st.subheader(f"🏆 Top {top_n} candidatos recomendados")
+st.subheader(f"Top {top_n} candidatos recomendados")
 
 if ranking.empty:
     st.warning("No se encontraron candidatos para este NRC.")
@@ -191,7 +191,7 @@ st.dataframe(
 
 # ── Candidate cards ───────────────────────────────────────────────────────────
 st.markdown("---")
-st.subheader("📋 Detalle por candidato")
+st.subheader("Detalle por candidato")
 
 for rank, row in eligible_ranking.iterrows():
     with st.expander(f"#{rank} — RUT {row['RUT']}  |  Score: {row['SCORE']:.4f}  (P(Aceptado))"):
@@ -205,7 +205,7 @@ for rank, row in eligible_ranking.iterrows():
 
 # ── Export ────────────────────────────────────────────────────────────────────
 st.markdown("---")
-st.subheader("📥 Exportar resultados")
+st.subheader("Exportar resultados")
 
 export_df = eligible_ranking[
     ["RUT", "NOTA_CURSO", "EXPERIENCIA", "PROMEDIO", "CARGA_ACTUAL", "SCORE", "JUSTIFICACIÓN"]
@@ -232,7 +232,7 @@ with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
     fi_export.to_excel(writer, index=False, sheet_name="Feature Importances")
 
 st.download_button(
-    label="⬇️ Descargar Excel",
+    label="Descargar Excel",
     data=buffer.getvalue(),
     file_name=f"ranking_ayudantes_NRC{selected_nrc}.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

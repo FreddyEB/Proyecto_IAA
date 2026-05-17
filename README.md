@@ -190,3 +190,4 @@ scikit-learn==1.5.0
 | 2026-05-15 | Implementación inicial: `data_loader.py`, `scoring.py` (pesos lineales fijos), `justification.py`, `app.py` |
 | 2026-05-15 | Reemplazo del scoring lineal por modelo Random Forest (`model.py`). Score = P(Aceptado). Métricas de CV y feature importances visibles en la app. |
 | 2026-05-15 | Creación de este documento (`README.md`) |
+| 2026-05-17 | Creación de guía de presentación (`PRESENTACION.md`) |
