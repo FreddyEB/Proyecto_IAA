@@ -103,6 +103,7 @@ with st.sidebar:
     st.markdown(f"- **Muestras de entrenamiento:** {metrics['n_samples']}")
     st.markdown(f"- **Aceptados / Rechazados:** {metrics['n_accepted']} / {metrics['n_rejected']}")
     st.markdown(f"- **CV Accuracy:** {metrics['cv_accuracy_mean']:.1%} ± {metrics['cv_accuracy_std']:.1%}")
+    st.markdown(f"- **CV F1-Score:** {metrics['cv_f1_mean']:.3f} ± {metrics['cv_f1_std']:.3f}")
     st.markdown(f"- **CV ROC-AUC:** {metrics['cv_roc_auc_mean']:.3f} ± {metrics['cv_roc_auc_std']:.3f}")
     st.markdown(f"- **Nota mínima requerida:** {MIN_PASSING_GRADE}")
     st.markdown("---")
@@ -154,18 +155,22 @@ total_postulantes = len(
 
 if not ranking.empty:
     eligible = ranking[ranking["FILTRO_NOTA"] & ranking["FILTRO_HORARIO"]]
-    tca = len(eligible) / total_postulantes * 100 if total_postulantes > 0 else 0
+    tasa_elegibilidad = len(eligible) / total_postulantes * 100 if total_postulantes > 0 else 0
     tch = len(ranking[~ranking["FILTRO_HORARIO"]]) / total_postulantes * 100 if total_postulantes > 0 else 0
+    # TCA: over recommended candidates, all have nota >= MIN_PASSING_GRADE by construction
+    tca = 100.0 if not eligible.empty else 0.0
 else:
     eligible = pd.DataFrame()
-    tca = tch = 0
+    tca = tch = tasa_elegibilidad = 0
 
 k1, k2, k3, k4 = st.columns(4)
-k1.metric("TCA — Compatibilidad Académica", f"{tca:.1f}%",
-          help="% de postulantes que aprueban el filtro de nota mínima")
+k1.metric("TCA — Compatibilidad Académica", f"{tca:.0f}%",
+          help=f"% de candidatos recomendados con nota ≥ {MIN_PASSING_GRADE} en el curso. "
+               "Siempre 100% porque el filtro duro lo garantiza.")
 k2.metric("TCH — Conflicto Horario", f"{tch:.1f}%",
           help="% de postulantes con conflicto horario detectado")
-k3.metric("Postulantes activos", total_postulantes)
+k3.metric("Tasa de elegibilidad", f"{tasa_elegibilidad:.1f}%",
+          help="% de postulantes que pasan ambos filtros duros (nota y horario)")
 k4.metric("Candidatos elegibles", len(eligible))
 
 st.markdown("---")
@@ -231,8 +236,9 @@ r2.metric("Línea base estimada", f"{tca_data['tca_baseline_pct']}%")
 r3.metric("Objetivo MVP", f"{tca_data['tca_objetivo_pct']}%")
 
 st.caption(
-    f"Calculado sobre {tca_data['total_aceptados']} asignaciones históricas con estado Aceptado. "
-    f"{tca_data['con_nota_en_ra311']} de ellas tienen nota registrada en RA311."
+    f"Calculado sobre {tca_data['con_nota_en_ra311']} asignaciones históricas con nota registrada en RA311 "
+    f"(de {tca_data['total_aceptados']} totales aceptadas). "
+    f"Las asignaciones sin nota en RA311 no se incluyen en el cálculo."
 )
 
 st.markdown("#### Tasa de aceptación del ranking")

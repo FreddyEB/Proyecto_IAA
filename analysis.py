@@ -42,7 +42,8 @@ def compute_tca_real(postulaciones: pd.DataFrame, notas: pd.DataFrame) -> dict:
     return {
         "total_aceptados": total,
         "con_nota_en_ra311": int(with_nota),
-        "tca_real_pct": round(compatible / total * 100, 1),
+        # TCA calculated only over assignments with a grade in RA311
+        "tca_real_pct": round(compatible / with_nota * 100, 1) if with_nota > 0 else 0.0,
         "tca_baseline_pct": 67.0,
         "tca_objetivo_pct": 90.0,
     }

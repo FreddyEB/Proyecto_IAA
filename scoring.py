@@ -5,13 +5,13 @@ Filtros duros/base:
   1. El candidato debe haber aprobado el curso (NOTA >= MIN_PASSING_GRADE in RA311)
   2. No debe haber conflicto de horario entre los ramos inscritos por el candidato y el NRC objetivo (sino se descarta)
 
-Score = P(Aceptado) from a trained Random Forest model.
+Score = P(Aceptado) del modelo Random Forest.
 """
 
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 
-MIN_PASSING_GRADE = 4.0
+MIN_PASSING_GRADE = 4.75
 
 
 def _parse_time_block(block: str) -> tuple[int, int] | None:

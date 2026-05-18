@@ -192,4 +192,4 @@ scikit-learn==1.5.0
 | 2026-05-15 | Creación de este documento (`README.md`) |
 | 2026-05-17 | Creación de guía de presentación (`PRESENTACION.md`) |
 | 2026-05-17 | Implementación de análisis retrospectivo (`analysis.py`). TCA real=61.7%, Top-1 match=83.5%, Top-3 match=96.5% sobre 85 NRCs históricos. Sección visible en la app y exportada al Excel. |
-| 2026-05-17 | Guía de presentación reescrita para formato 7 min + 10 min preguntas (`PRESENTACION.md`) |
+| 2026-05-18 | Umbral `MIN_PASSING_GRADE` cambiado de 4.0 a **4.75**. TCA en app ahora se calcula sobre candidatos recomendados (siempre 100% por construcción). Indicador anterior renombrado a "Tasa de elegibilidad". TCA real histórico actualizado a 54.1%. |

@@ -107,6 +107,7 @@ def train(training_data: pd.DataFrame) -> tuple[RandomForestClassifier, dict]:
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     cv_accuracy = cross_val_score(model, X, y, cv=cv, scoring="accuracy")
     cv_roc_auc = cross_val_score(model, X, y, cv=cv, scoring="roc_auc")
+    cv_f1 = cross_val_score(model, X, y, cv=cv, scoring="f1")
 
     # Fit on full data for production use
     model.fit(X, y)
@@ -116,6 +117,8 @@ def train(training_data: pd.DataFrame) -> tuple[RandomForestClassifier, dict]:
         "cv_accuracy_std": float(cv_accuracy.std()),
         "cv_roc_auc_mean": float(cv_roc_auc.mean()),
         "cv_roc_auc_std": float(cv_roc_auc.std()),
+        "cv_f1_mean": float(cv_f1.mean()),
+        "cv_f1_std": float(cv_f1.std()),
         "n_samples": len(y),
         "n_accepted": int(y.sum()),
         "n_rejected": int((y == 0).sum()),
