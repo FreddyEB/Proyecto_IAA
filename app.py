@@ -96,7 +96,7 @@ with st.sidebar:
 
     selected_label = st.selectbox("Seleccionar curso (NRC)", list(nrc_labels.values()))
     selected_nrc = [k for k, v in nrc_labels.items() if v == selected_label][0]
-    top_n = st.slider("Candidatos a mostrar", 1, 10, 5)
+    top_n = st.slider("Candidatos a mostrar", 1, 20, 5)
 
     st.markdown("---")
     st.markdown("### Modelo Random Forest")
@@ -199,7 +199,7 @@ eligible_ranking["JUSTIFICACIÓN"] = eligible_ranking.apply(
     lambda r: generate_justification(r.to_dict(), course_name), axis=1
 )
 
-display_cols = ["RUT", "NOTA_CURSO", "EXPERIENCIA", "PROMEDIO", "CARGA_ACTUAL", "SCORE"]
+display_cols = ["RUT", "TIPO_AYUDANTE", "NOTA_CURSO", "EXPERIENCIA", "PROMEDIO", "CARGA_ACTUAL", "SCORE"]
 st.dataframe(
     eligible_ranking[display_cols].style.format({
         "NOTA_CURSO": "{:.1f}", "PROMEDIO": "{:.2f}",
@@ -213,12 +213,13 @@ st.markdown("---")
 st.subheader("Detalle por candidato")
 
 for rank, row in eligible_ranking.iterrows():
-    with st.expander(f"#{rank} — RUT {row['RUT']}  |  Score: {row['SCORE']:.4f}  (P(Aceptado))"):
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Nota en el curso", f"{row['NOTA_CURSO']:.1f}")
-        c2.metric("Experiencia previa", f"{int(row['EXPERIENCIA'])} sem.")
-        c3.metric("Promedio acumulado", f"{row['PROMEDIO']:.2f}")
-        c4.metric("Carga actual", f"{int(row['CARGA_ACTUAL'])} ramos")
+    with st.expander(f"#{rank} — RUT {row['RUT']}  |  {row['TIPO_AYUDANTE']}  |  Score: {row['SCORE']:.4f}  (P(Aceptado))"):
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("Tipo", row["TIPO_AYUDANTE"])
+        c2.metric("Nota en el curso", f"{row['NOTA_CURSO']:.1f}")
+        c3.metric("Experiencia previa", f"{int(row['EXPERIENCIA'])} sem.")
+        c4.metric("Promedio acumulado", f"{row['PROMEDIO']:.2f}")
+        c5.metric("Carga actual", f"{int(row['CARGA_ACTUAL'])} ramos")
         st.markdown("**Justificación:**")
         st.info(row["JUSTIFICACIÓN"])
 
@@ -257,7 +258,7 @@ st.markdown("---")
 st.subheader("Exportar resultados")
 
 export_df = eligible_ranking[
-    ["RUT", "NOTA_CURSO", "EXPERIENCIA", "PROMEDIO", "CARGA_ACTUAL", "SCORE", "JUSTIFICACIÓN"]
+    ["RUT", "TIPO_AYUDANTE", "NOTA_CURSO", "EXPERIENCIA", "PROMEDIO", "CARGA_ACTUAL", "SCORE", "JUSTIFICACIÓN"]
 ].copy()
 export_df.insert(0, "RANKING", range(1, len(export_df) + 1))
 export_df["NRC"] = selected_nrc

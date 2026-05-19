@@ -81,7 +81,9 @@ def rank_candidates(
     cands_post = postulaciones[
         (postulaciones["NRC"] == target_nrc) &
         (postulaciones["Estado"].isin(["Pendiente", "Aceptado"]))
-    ][["RUT", "Tipo de ayudante"]].drop_duplicates("RUT")
+    ][["RUT", "Tipo de ayudante"]].drop_duplicates("RUT").rename(
+        columns={"Tipo de ayudante": "TIPO_AYUDANTE"}
+    )
 
     if cands_post.empty:
         return pd.DataFrame()
@@ -132,7 +134,7 @@ def rank_candidates(
     le = LabelEncoder()
     le.fit(["Corrector", "Coordinador Tipo 1", "Coordinador Tipo 2",
             "Laboratorio Tipo 1", "Laboratorio Tipo 2", "Proyecto", "de Catedra"])
-    df["TIPO_NUM"] = df["Tipo de ayudante"].apply(
+    df["TIPO_NUM"] = df["TIPO_AYUDANTE"].apply(
         lambda x: le.transform([x])[0] if x in le.classes_ else 0
     )
 
@@ -146,7 +148,7 @@ def rank_candidates(
 
     if eligible.empty:
         df["SCORE"] = 0.0
-        return df[["RUT", "NOTA_CURSO", "EXPERIENCIA", "PROMEDIO", "CARGA_ACTUAL",
+        return df[["RUT", "TIPO_AYUDANTE", "NOTA_CURSO", "EXPERIENCIA", "PROMEDIO", "CARGA_ACTUAL",
                     "SCORE", "FILTRO_NOTA", "FILTRO_HORARIO"]].sort_values("NOTA_CURSO", ascending=False)
 
     # Score = P(Aceptado) del Random Forest
@@ -154,5 +156,5 @@ def rank_candidates(
     eligible["SCORE"] = predict_scores(model, eligible).round(4)
 
     result = eligible.sort_values("SCORE", ascending=False).head(top_n)
-    return result[["RUT", "NOTA_CURSO", "EXPERIENCIA", "PROMEDIO", "CARGA_ACTUAL",
+    return result[["RUT", "TIPO_AYUDANTE", "NOTA_CURSO", "EXPERIENCIA", "PROMEDIO", "CARGA_ACTUAL",
                    "SCORE", "FILTRO_NOTA", "FILTRO_HORARIO"]]
