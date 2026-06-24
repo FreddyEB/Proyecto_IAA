@@ -12,6 +12,34 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 
 MIN_PASSING_GRADE = 4.75
+MAX_GRADE = 7.0
+
+DEFAULT_WEIGHTS = {"nota": 0.40, "promedio": 0.15, "experiencia": 0.20, "ia": 0.25}
+
+TYPES_REQUIRING_ATTENDANCE = {"de Catedra", "Laboratorio Tipo 1", "Laboratorio Tipo 2"}
+
+
+def normalize_weights(weights: dict) -> dict:
+    total = sum(weights.values())
+    if total <= 0:
+        n = len(weights)
+        return {k: 1.0 / n for k in weights}
+    return {k: v / total for k, v in weights.items()}
+
+
+def compute_hybrid_score(df: pd.DataFrame, p_ia, weights: dict) -> pd.Series:
+    w = normalize_weights(weights)
+    norm_nota = (df["NOTA_CURSO"] / MAX_GRADE).clip(0, 1)
+    norm_prom = (df["PROMEDIO"] / MAX_GRADE).clip(0, 1)
+    max_exp = df["EXPERIENCIA"].max()
+    if max_exp and max_exp > 0:
+        norm_exp = (df["EXPERIENCIA"] / max_exp).clip(0, 1)
+    else:
+        norm_exp = df["EXPERIENCIA"] * 0.0
+    p_ia = pd.Series(list(p_ia), index=df.index)
+    score = (w["nota"] * norm_nota + w["promedio"] * norm_prom
+             + w["experiencia"] * norm_exp + w["ia"] * p_ia)
+    return score.clip(0, 1)
 
 
 def _parse_time_block(block: str) -> tuple[int, int] | None:
