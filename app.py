@@ -3,24 +3,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 import streamlit as st
-from data_loader import load_all
-from model import build_training_data, train
+from services import get_data, get_model
 
 if not st.session_state.get("_page_config_set"):
     st.set_page_config(page_title="Recomendación de Ayudantes", page_icon="🎓", layout="wide")
     st.session_state["_page_config_set"] = True
-
-
-@st.cache_data(show_spinner="Cargando datos académicos…")
-def get_data():
-    return load_all()
-
-
-@st.cache_resource(show_spinner="Entrenando modelo Random Forest…")
-def get_model():
-    data = get_data()
-    td = build_training_data(data["postulaciones"], data["notas"], data["promedios"])
-    return train(td)
 
 
 # Datos siempre disponibles en sesión para las vistas

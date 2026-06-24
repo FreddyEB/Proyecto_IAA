@@ -3,11 +3,10 @@ import streamlit as st
 
 import data_store
 from data_store import FILE_CODES, DATA_DIR, validate_columns, present_files, clear_all
+from services import get_data, get_model
 
 
 def render():
-    from app import get_data, get_model
-
     st.title("Cargar / actualizar datos (CSV)")
     st.caption("Sube los archivos del período. Se guardan en el servidor y persisten entre sesiones.")
 

@@ -4,10 +4,10 @@ import streamlit as st
 
 from scoring import rank_candidates, DEFAULT_WEIGHTS, MIN_PASSING_GRADE
 from justification import generate as generate_justification
+from services import get_data, get_model
 
 
 def render():
-    from app import get_data, get_model
     data = get_data()
     model, metrics = get_model()
     horarios = data["horarios"]
