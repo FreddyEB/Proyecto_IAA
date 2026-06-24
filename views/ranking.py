@@ -74,7 +74,7 @@ def render():
     display_cols = ["RUT", "TIPO_AYUDANTE", "NOTA_CURSO", "EXPERIENCIA", "PROMEDIO", "SCORE"]
     st.dataframe(eligible[display_cols].style.format(
         {"NOTA_CURSO": "{:.1f}", "PROMEDIO": "{:.2f}", "SCORE": "{:.4f}",
-         "EXPERIENCIA": "{:.0f}"}).background_gradient(subset=["SCORE"], cmap="Greens"),
+         "EXPERIENCIA": "{:.0f}"}).bar(subset=["SCORE"], color="#9fd99f", vmin=0.0, vmax=1.0),
         use_container_width=True)
 
     st.subheader("Detalle por candidato")
