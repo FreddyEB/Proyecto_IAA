@@ -6,7 +6,9 @@ import streamlit as st
 from data_loader import load_all
 from model import build_training_data, train
 
-st.set_page_config(page_title="Recomendación de Ayudantes", page_icon="🎓", layout="wide")
+if not st.session_state.get("_page_config_set"):
+    st.set_page_config(page_title="Recomendación de Ayudantes", page_icon="🎓", layout="wide")
+    st.session_state["_page_config_set"] = True
 
 
 @st.cache_data(show_spinner="Cargando datos académicos…")
@@ -27,7 +29,7 @@ st.session_state["_data"] = get_data()
 import views.login as login_view
 
 if "profesor" not in st.session_state:
-    pg = st.navigation([st.Page(login_view.render, title="Ingreso", icon="🔑")])
+    pg = st.navigation([st.Page(login_view.render, title="Ingreso", icon="🔑", url_path="login")])
 else:
     import views.ranking as ranking_view
     import views.upload as upload_view
@@ -37,8 +39,8 @@ else:
             del st.session_state["profesor"]
             st.rerun()
     pg = st.navigation([
-        st.Page(ranking_view.render, title="Mis cursos / Ranking", icon="📊"),
-        st.Page(upload_view.render, title="Cargar datos", icon="📂"),
+        st.Page(ranking_view.render, title="Mis cursos / Ranking", icon="📊", url_path="ranking"),
+        st.Page(upload_view.render, title="Cargar datos", icon="📂", url_path="upload"),
     ])
 
 pg.run()
