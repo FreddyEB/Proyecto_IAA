@@ -79,24 +79,33 @@ def _build_schedule_map(horarios_df: pd.DataFrame) -> dict:
     return schedule
 
 
+def schedule_filter_passes(tipo: str, has_conflict: bool) -> bool:
+    if tipo in TYPES_REQUIRING_ATTENDANCE:
+        return not has_conflict
+    return True
+
+
 def rank_candidates(
     target_nrc: str,
     postulaciones: pd.DataFrame,
     notas: pd.DataFrame,
     promedios: pd.DataFrame,
-    carga: pd.DataFrame,
     horarios: pd.DataFrame,
-    ug307: pd.DataFrame,
+    ramos_inscritos: pd.DataFrame,
     model: RandomForestClassifier,
+    weights: dict = None,
     top_n: int = 5,
 ) -> pd.DataFrame:
-    """
-    Retorna un DF con los candidatos top para el target_nrc.
-    Score = P(Aceptado) del modelo Random Forest.
-    """
+    from model import predict_scores
+    from sklearn.preprocessing import LabelEncoder
+
+    weights = weights or DEFAULT_WEIGHTS
+    out_cols = ["RUT", "TIPO_AYUDANTE", "NOTA_CURSO", "EXPERIENCIA",
+                "PROMEDIO", "SCORE", "FILTRO_NOTA", "FILTRO_HORARIO"]
+
     nrc_info = horarios[horarios["NRC"] == target_nrc]
     if nrc_info.empty:
-        return pd.DataFrame()
+        return pd.DataFrame(columns=out_cols)
 
     materia = str(nrc_info.iloc[0]["MATERIA"]).strip()
     raw_curso = nrc_info.iloc[0]["CURSO"]
@@ -105,38 +114,29 @@ def rank_candidates(
     except (ValueError, TypeError):
         curso = str(raw_curso).strip()
 
-    # Candidatos con postulaciones activas
     cands_post = postulaciones[
         (postulaciones["NRC"] == target_nrc) &
         (postulaciones["Estado"].isin(["Pendiente", "Aceptado"]))
     ][["RUT", "Tipo de ayudante"]].drop_duplicates("RUT").rename(
-        columns={"Tipo de ayudante": "TIPO_AYUDANTE"}
-    )
-
+        columns={"Tipo de ayudante": "TIPO_AYUDANTE"})
     if cands_post.empty:
-        return pd.DataFrame()
+        return pd.DataFrame(columns=out_cols)
 
-    # Experiencia previa
     exp_counts = (
         postulaciones[postulaciones["Estado"] == "Aceptado"]
-        .groupby("RUT").size().reset_index(name="EXPERIENCIA")
-    )
+        .groupby("RUT").size().reset_index(name="EXPERIENCIA"))
 
-    # Mejor nota para este curso
     course_grades = (
         notas[(notas["MATERIA"] == materia) & (notas["CURSO"] == curso)]
         [["RUT", "NOTA"]].sort_values("NOTA", ascending=False)
-        .drop_duplicates("RUT")
-        .rename(columns={"NOTA": "NOTA_CURSO"})
-    )
+        .drop_duplicates("RUT").rename(columns={"NOTA": "NOTA_CURSO"}))
 
-    # Conflicto horario
     schedule_map = _build_schedule_map(horarios)
     target_sched = schedule_map.get(target_nrc, {})
-    ug307 = ug307.copy()
-    ug307["RUT"] = ug307["RUT"].astype(str).str.strip()
-    ug307["NRC"] = ug307["NRC"].astype(str).str.strip()
-    enrolled_by_rut = ug307.groupby("RUT")["NRC"].apply(list).to_dict()
+    ri = ramos_inscritos.copy()
+    ri["RUT"] = ri["RUT"].astype(str).str.strip()
+    ri["NRC"] = ri["NRC"].astype(str).str.strip()
+    enrolled_by_rut = ri.groupby("RUT")["NRC"].apply(list).to_dict()
 
     def get_cand_sched(rut):
         merged = {}
@@ -145,44 +145,32 @@ def rank_candidates(
                 merged.setdefault(day, []).extend(blocks)
         return merged
 
-    # feature matrix
     df = cands_post.copy()
     df = df.merge(course_grades, on="RUT", how="left")
     df = df.merge(exp_counts, on="RUT", how="left")
     df = df.merge(promedios[["RUT", "PROMEDIO  GENERAL  ACUMULADO"]], on="RUT", how="left")
-    df = df.merge(carga, on="RUT", how="left")
-
     df["NOTA_CURSO"] = df["NOTA_CURSO"].fillna(0)
     df["EXPERIENCIA"] = df["EXPERIENCIA"].fillna(0)
     df["PROMEDIO"] = df["PROMEDIO  GENERAL  ACUMULADO"].fillna(0)
-    df["CARGA_ACTUAL"] = df["CARGA_ACTUAL"].fillna(0)
 
-    # Encode tipo de ayudante
-    from sklearn.preprocessing import LabelEncoder
     le = LabelEncoder()
     le.fit(["Corrector", "Coordinador Tipo 1", "Coordinador Tipo 2",
             "Laboratorio Tipo 1", "Laboratorio Tipo 2", "Proyecto", "de Catedra"])
     df["TIPO_NUM"] = df["TIPO_AYUDANTE"].apply(
-        lambda x: le.transform([x])[0] if x in le.classes_ else 0
-    )
+        lambda x: le.transform([x])[0] if x in le.classes_ else 0)
 
-    # Filtros duros/base
     df["FILTRO_NOTA"] = df["NOTA_CURSO"] >= MIN_PASSING_GRADE
-    df["FILTRO_HORARIO"] = ~df["RUT"].apply(
-        lambda r: _has_schedule_conflict(get_cand_sched(r), target_sched)
-    )
+    df["_CONFLICT"] = df["RUT"].apply(
+        lambda r: _has_schedule_conflict(get_cand_sched(r), target_sched))
+    df["FILTRO_HORARIO"] = df.apply(
+        lambda r: schedule_filter_passes(r["TIPO_AYUDANTE"], r["_CONFLICT"]), axis=1)
 
     eligible = df[df["FILTRO_NOTA"] & df["FILTRO_HORARIO"]].copy()
-
     if eligible.empty:
         df["SCORE"] = 0.0
-        return df[["RUT", "TIPO_AYUDANTE", "NOTA_CURSO", "EXPERIENCIA", "PROMEDIO", "CARGA_ACTUAL",
-                    "SCORE", "FILTRO_NOTA", "FILTRO_HORARIO"]].sort_values("NOTA_CURSO", ascending=False)
+        return df[out_cols].sort_values("NOTA_CURSO", ascending=False)
 
-    # Score = P(Aceptado) del Random Forest
-    from model import predict_scores, FEATURES
-    eligible["SCORE"] = predict_scores(model, eligible).round(4)
-
+    p_ia = predict_scores(model, eligible)
+    eligible["SCORE"] = compute_hybrid_score(eligible, p_ia, weights).round(4)
     result = eligible.sort_values("SCORE", ascending=False).head(top_n)
-    return result[["RUT", "TIPO_AYUDANTE", "NOTA_CURSO", "EXPERIENCIA", "PROMEDIO", "CARGA_ACTUAL",
-                   "SCORE", "FILTRO_NOTA", "FILTRO_HORARIO"]]
+    return result[out_cols]
