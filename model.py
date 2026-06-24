@@ -14,11 +14,10 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_val_score, StratifiedKFold
 from sklearn.preprocessing import LabelEncoder
 
-FEATURES = ["NOTA_CURSO", "PROMEDIO", "CARGA_ACTUAL", "EXPERIENCIA", "TIPO_NUM"]
+FEATURES = ["NOTA_CURSO", "PROMEDIO", "EXPERIENCIA", "TIPO_NUM"]
 FEATURE_LABELS = {
     "NOTA_CURSO": "Nota en el curso",
     "PROMEDIO": "Promedio acumulado",
-    "CARGA_ACTUAL": "Carga académica",
     "EXPERIENCIA": "Experiencia previa",
     "TIPO_NUM": "Tipo de ayudantía",
 }
@@ -28,9 +27,8 @@ def build_training_data(
     postulaciones: pd.DataFrame,
     notas: pd.DataFrame,
     promedios: pd.DataFrame,
-    carga: pd.DataFrame,
 ) -> pd.DataFrame:
-    
+
     """
     Une las postulaciones historicas (Aceptado/Rechazado) con las features academicas.
      Devuelve un DataFrame listo para entrenar el modelo, con columnas FEATURES + "label".
@@ -39,7 +37,6 @@ def build_training_data(
      Asume que postulaciones tiene columnas: RUT, Curso, Materia, Estado (Aceptado/Rechazado), Tipo de ayudante.
      Asume que notas tiene columnas: RUT, MATERIA, CURSO, NOTA.
      Asume que promedios tiene columnas: RUT, PROMEDIO  GENERAL  ACUMULADO.
-     Asume que carga tiene columnas: RUT, CARGA_ACTUAL.
     """
     labeled = postulaciones[postulaciones["Estado"].isin(["Aceptado", "Rechazado"])].copy()
     labeled["label"] = (labeled["Estado"] == "Aceptado").astype(int)
@@ -67,7 +64,6 @@ def build_training_data(
         on="RUT",
         how="left",
     )
-    df = df.merge(carga, on="RUT", how="left")
 
     exp = (
         postulaciones[postulaciones["Estado"] == "Aceptado"]
@@ -78,7 +74,6 @@ def build_training_data(
     exp["RUT"] = exp["RUT"].astype(str)
     df = df.merge(exp, on="RUT", how="left")
     df["EXPERIENCIA"] = df["EXPERIENCIA"].fillna(0)
-    df["CARGA_ACTUAL"] = df["CARGA_ACTUAL"].fillna(0)
 
     # Encode tipo de ayudante
     le = LabelEncoder()
