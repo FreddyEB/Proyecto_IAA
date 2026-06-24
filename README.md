@@ -20,7 +20,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-La app se abre en `http://localhost:8501`. Los CSV de datos viven en la **carpeta del proyecto** (`ayudantes_mvp/`).
+La app se abre en `http://localhost:8501`. La primera vez (sin datos) la app entra en **modo carga**: sube los 5 CSV desde la página *Cargar datos* y quedan guardados en el almacén del app (`ayudantes_mvp/app_data/`), que persiste entre sesiones. El app **solo** gestiona esa carpeta; nunca lee ni borra archivos fuera de ella.
 
 Para correr los tests:
 
@@ -51,7 +51,7 @@ ayudantes_mvp/
 └── README.md
 ```
 
-### Archivos de datos (carpeta del proyecto)
+### Archivos de datos (almacén del app: `app_data/`)
 
 | Código | Contenido | Uso |
 |---|---|---|
@@ -109,7 +109,7 @@ Los elegibles se ordenan por score híbrido (top-N configurable). Para cada uno 
 
 ## Carga de datos (próximos semestres)
 
-La página **Cargar datos** permite subir los 5 CSV (reconocidos por código: RA311, UG201, UG305, UG307, reportePostulaciones), validando columnas. Los archivos se **guardan en disco** y persisten entre sesiones. Un botón **Limpiar** borra el set actual antes de cargar uno nuevo, evitando mezclar períodos. Tras cargar o limpiar, el modelo se re-entrena.
+La página **Cargar datos** permite subir los 5 CSV (reconocidos por código: RA311, UG201, UG305, UG307, reportePostulaciones), validando columnas. Los archivos se guardan en el almacén del app (`app_data/`) y persisten entre sesiones. El botón **Limpiar** (con confirmación) saca el set actual del almacén **moviéndolo a un respaldo recuperable** (`app_data/_backup/<fecha>/`) — no borra nada de tu computador ni toca tus archivos originales. Tras cargar o limpiar, el modelo se re-entrena.
 
 ---
 

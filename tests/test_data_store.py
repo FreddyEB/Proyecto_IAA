@@ -44,3 +44,10 @@ def test_present_and_clear_moves_to_backup(tmp_path):
 def test_clear_all_nothing(tmp_path):
     result = data_store.clear_all(base_dir=tmp_path)
     assert result["moved"] == [] and result["backup_dir"] is None
+
+
+def test_save_upload_creates_dir_and_file(tmp_path):
+    base = tmp_path / "app_data"
+    dest = data_store.save_upload("RA311 nuevo.csv", b"RUT,NOTA\n1,6\n", base_dir=base)
+    assert dest.exists()
+    assert data_store.present_files(base_dir=base)["notas"] is True

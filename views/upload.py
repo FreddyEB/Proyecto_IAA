@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 
 import data_store
-from data_store import FILE_CODES, DATA_DIR, validate_columns, present_files, clear_all
+from data_store import FILE_CODES, validate_columns, present_files, clear_all, save_upload
 from services import get_data, get_model
 
 
@@ -50,9 +50,7 @@ def render():
             if missing:
                 st.error(f"{label}: faltan columnas {missing}. No se guardó.")
             else:
-                dest = DATA_DIR / up.name
-                up.seek(0)
-                dest.write_bytes(up.getvalue())
+                save_upload(up.name, up.getvalue())
                 get_data.clear()
                 get_model.clear()
                 st.success(f"{label}: guardado como {up.name} y datos recargados.")

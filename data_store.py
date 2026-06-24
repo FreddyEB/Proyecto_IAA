@@ -3,8 +3,9 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-DATA_DIR = Path(__file__).parent
-BACKUP_DIRNAME = "_data_backup"
+# El app gestiona SOLO esta carpeta. Nunca lee ni borra archivos fuera de ella.
+DATA_DIR = Path(__file__).parent / "app_data"
+BACKUP_DIRNAME = "_backup"
 
 FILE_CODES = {
     "postulaciones": "reportePostulaciones",
@@ -34,6 +35,15 @@ def validate_columns(code: str, columns) -> list[str]:
     expected = EXPECTED_COLUMNS[code]
     present = {str(c).strip() for c in columns}
     return [c for c in expected if c not in present]
+
+
+def save_upload(filename: str, content: bytes, base_dir: Path = DATA_DIR) -> Path:
+    """Guarda un archivo subido dentro del almacén del app (lo crea si no existe)."""
+    base_dir = Path(base_dir)
+    base_dir.mkdir(parents=True, exist_ok=True)
+    dest = base_dir / filename
+    dest.write_bytes(content)
+    return dest
 
 
 def present_files(base_dir: Path = DATA_DIR) -> dict[str, bool]:
