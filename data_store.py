@@ -1,7 +1,10 @@
 """Resolución, validación y persistencia de los CSV de entrada."""
+import shutil
+from datetime import datetime
 from pathlib import Path
 
 DATA_DIR = Path(__file__).parent
+BACKUP_DIRNAME = "_data_backup"
 
 FILE_CODES = {
     "postulaciones": "reportePostulaciones",
@@ -44,10 +47,15 @@ def present_files(base_dir: Path = DATA_DIR) -> dict[str, bool]:
     return result
 
 
-def clear_all(base_dir: Path = DATA_DIR) -> list[str]:
-    deleted = []
+def clear_all(base_dir: Path = DATA_DIR) -> dict:
+    """Mueve los CSV reconocidos a una carpeta de respaldo con timestamp (reversible),
+    en vez de borrarlos. Devuelve {"moved": [nombres], "backup_dir": ruta|None}."""
+    base_dir = Path(base_dir)
+    backup_dir = base_dir / BACKUP_DIRNAME / datetime.now().strftime("%Y%m%d_%H%M%S")
+    moved = []
     for code in FILE_CODES.values():
-        for path in Path(base_dir).glob(f"*{code}*.csv"):
-            path.unlink()
-            deleted.append(path.name)
-    return deleted
+        for path in base_dir.glob(f"*{code}*.csv"):
+            backup_dir.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(path), str(backup_dir / path.name))
+            moved.append(path.name)
+    return {"moved": moved, "backup_dir": str(backup_dir) if moved else None}

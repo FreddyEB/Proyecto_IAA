@@ -25,12 +25,22 @@ def test_validate_columns_ok():
     assert data_store.validate_columns("promedios", ["RUT", "PROMEDIO  GENERAL  ACUMULADO"]) == []
 
 
-def test_present_and_clear(tmp_path):
+def test_present_and_clear_moves_to_backup(tmp_path):
     (tmp_path / "RA311 x.csv").write_text("x\n")
     (tmp_path / "UG201 y.csv").write_text("x\n")
     present = data_store.present_files(base_dir=tmp_path)
     assert present["notas"] is True and present["horarios"] is True
     assert present["postulaciones"] is False
-    deleted = data_store.clear_all(base_dir=tmp_path)
-    assert len(deleted) == 2
+
+    result = data_store.clear_all(base_dir=tmp_path)
+    assert len(result["moved"]) == 2
+    # ya no aparecen como presentes en el directorio de trabajo
     assert data_store.present_files(base_dir=tmp_path)["notas"] is False
+    # pero quedan respaldados (recuperables), no borrados
+    backups = list(Path(result["backup_dir"]).glob("*.csv"))
+    assert len(backups) == 2
+
+
+def test_clear_all_nothing(tmp_path):
+    result = data_store.clear_all(base_dir=tmp_path)
+    assert result["moved"] == [] and result["backup_dir"] is None

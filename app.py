@@ -10,16 +10,25 @@ if not st.session_state.get("_page_config_set"):
     st.session_state["_page_config_set"] = True
 
 
-# Datos siempre disponibles en sesión para las vistas
-st.session_state["_data"] = get_data()
+# Datos disponibles en sesión para las vistas. Si faltan archivos (p. ej. tras
+# limpiar para recargar), no se crashea: se entra en modo bootstrap de carga.
+try:
+    st.session_state["_data"] = get_data()
+    _data_ok = True
+except FileNotFoundError:
+    st.session_state["_data"] = None
+    _data_ok = False
 
 import views.login as login_view
+import views.upload as upload_view
 
-if "profesor" not in st.session_state:
+if not _data_ok:
+    st.warning("No hay datos cargados. Sube los archivos CSV para comenzar.")
+    pg = st.navigation([st.Page(upload_view.render, title="Cargar datos", icon="📂", url_path="upload")])
+elif "profesor" not in st.session_state:
     pg = st.navigation([st.Page(login_view.render, title="Ingreso", icon="🔑", url_path="login")])
 else:
     import views.ranking as ranking_view
-    import views.upload as upload_view
     with st.sidebar:
         st.markdown(f"**Profesor:** {st.session_state['profesor']['nombre']}")
         if st.button("Cerrar sesión"):

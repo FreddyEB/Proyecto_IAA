@@ -17,12 +17,18 @@ def render():
          for k, v in present.items()]))
 
     st.subheader("Limpiar datos")
-    st.write("Borra los archivos actuales antes de subir un set nuevo para evitar mezclar períodos.")
-    if st.button("🗑️ Limpiar todos los datos cargados"):
-        deleted = clear_all()
+    st.write("Mueve los archivos actuales a una carpeta de respaldo (reversible) antes de "
+             "subir un set nuevo, para no mezclar períodos.")
+    confirmar = st.checkbox("Confirmo que quiero limpiar los datos actuales")
+    if st.button("🗑️ Limpiar datos cargados", disabled=not confirmar):
+        result = clear_all()
         get_data.clear()
         get_model.clear()
-        st.success(f"Eliminados {len(deleted)} archivos. Sube los nuevos a continuación.")
+        if result["moved"]:
+            st.success(f"Se movieron {len(result['moved'])} archivos a respaldo "
+                       f"(`{result['backup_dir']}`). Sube los nuevos a continuación.")
+        else:
+            st.info("No había archivos que limpiar.")
         st.rerun()
 
     st.subheader("Subir archivos")
