@@ -8,7 +8,7 @@
 
 ## Descripción
 
-Sistema inteligente de recomendación de ayudantes para la Facultad de Ingeniería y Ciencias Aplicadas. Dado un curso (NRC), el sistema identifica a los postulantes más adecuados aplicando filtros de elegibilidad y un modelo de Machine Learning que predice la probabilidad de que un candidato sea aceptado, basándose en decisiones históricas reales.
+Sistema inteligente de recomendación de ayudantes para la Facultad de Ingeniería y Ciencias Aplicadas. Dado un curso (NRC), el sistema aplica filtros de elegibilidad y un **score híbrido** (modelo de Machine Learning + pesos ajustables por el profesor) para ordenar a los postulantes más adecuados, con justificaciones explicables. Actúa como apoyo a la decisión: el profesor decide.
 
 ---
 
@@ -20,7 +20,13 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-La app se abre automáticamente en `http://localhost:8501`.
+La app se abre en `http://localhost:8501`. Los CSV de datos viven en la **carpeta del proyecto** (`ayudantes_mvp/`).
+
+Para correr los tests:
+
+```bash
+python -m pytest -q
+```
 
 ---
 
@@ -28,158 +34,104 @@ La app se abre automáticamente en `http://localhost:8501`.
 
 ```
 ayudantes_mvp/
-├── app.py            # Interfaz Streamlit
-├── model.py          # Entrenamiento y predicción (Random Forest)
-├── scoring.py        # Filtros duros + ranking con score del modelo
-├── data_loader.py    # Carga y limpieza de los 5 CSVs
-├── justification.py  # Generación de texto explicativo en español
+├── app.py            # Entrada Streamlit multipágina (st.navigation) + login
+├── views/
+│   ├── login.py      # Login de profesor (clave = RUT)
+│   ├── ranking.py    # Ranking por curso, sliders de pesos, KPIs, export
+│   └── upload.py     # Carga persistente de CSV con validación y reset
+├── auth.py           # Autenticación por RUT contra UG201
+├── data_store.py     # Resolución, validación y persistencia de los CSV
+├── data_loader.py    # Carga y limpieza de los CSV
+├── model.py          # Random Forest (señal P(Aceptado))
+├── scoring.py        # Filtros + score híbrido con pesos ajustables
+├── justification.py  # Texto explicativo por candidato (según pesos)
+├── analysis.py       # Análisis retrospectivo (utilidad)
+├── tests/            # Suite pytest
 ├── requirements.txt
 └── README.md
 ```
 
-### Archivos de datos (directorio raíz del proyecto)
+### Archivos de datos (carpeta del proyecto)
 
-| Archivo | Contenido | Uso |
+| Código | Contenido | Uso |
 |---|---|---|
-| `reportePostulaciones 202610.xlsx - Registros.csv` | Postulaciones con estado (Aceptado/Rechazado/Pendiente) | Candidatos + etiquetas de entrenamiento |
-| `RA311 - Cumplimiento de Malla Pregrado...csv` | Historial académico completo con notas por curso | Nota del postulante en el curso |
-| `UG305 - Reporte Alumnos con Promedio...csv` | Promedio acumulado por alumno | Feature: promedio general |
-| `UG307 - Ramos Inscritos por Periodo...csv` | Ramos inscritos en el período actual | Feature: carga académica + detección de conflictos horarios |
-| `UG201 - Listado de NRC por Periodo...csv` | NRCs con horarios por día | Horarios de cursos para filtro de conflicto |
+| `reportePostulaciones` | Postulaciones con estado (Aceptado/Rechazado/Pendiente) | Candidatos + etiquetas de entrenamiento + experiencia |
+| `RA311` | Historial académico con notas por curso | Nota del postulante en el curso |
+| `UG305` | Promedio acumulado por alumno | Feature: promedio general |
+| `UG307` | Ramos inscritos en el período | Detección de conflictos horarios |
+| `UG201` | NRCs con horarios, tipo y profesor | Horarios, tipo de bloque y relación profesor↔curso |
 
-> Los nombres de estudiantes no están presentes en los datos por privacidad. El **RUT** es el identificador único de cada postulante.
+> Los nombres de estudiantes no están presentes por privacidad. El **RUT** es el identificador único.
 
 ---
 
-## Arquitectura del sistema
+## Login de profesores
 
-```
-CSVs (datos reales)
-      │
-      ▼
-data_loader.py  ──►  model.py (Random Forest)
-      │                    │
-      ▼                    ▼ P(Aceptado)
-scoring.py  ◄─────────────┘
-  │  Filtros duros (nota ≥ 4.0, sin conflicto horario)
-  │  Score = predict_proba del modelo
-      │
-      ▼
-justification.py  ──►  texto explicativo por candidato
-      │
-      ▼
-app.py (Streamlit)
-```
+El profesor ingresa su nombre y apellido, y su **clave es su RUT**. El RUT se valida contra `RUT PROFESOR` en UG201 y determina **qué cursos (NRC) ve**: solo los que dicta ese período. Es un mecanismo de demostración (POC), no de seguridad real.
 
 ---
 
-## Modelo de IA — Random Forest
+## Modelo de IA y score híbrido
 
-### Problema de aprendizaje
-Clasificación binaria supervisada:  
-- **Label 1:** postulante fue `Aceptado` históricamente  
-- **Label 0:** postulante fue `Rechazado`
+### Señal de IA — Random Forest
+Clasificación binaria supervisada (`1 = Aceptado`, `0 = Rechazado`) entrenada con las decisiones históricas. Features: `NOTA_CURSO`, `PROMEDIO`, `EXPERIENCIA`, `TIPO_NUM`. Produce `P_IA = P(Aceptado)`.
 
-### Features
+> La feature `CARGA_ACTUAL` fue eliminada del modelo. UG307 se conserva solo para la detección de conflictos horarios.
 
-| Feature | Descripción | Fuente |
-|---|---|---|
-| `NOTA_CURSO` | Mejor nota del postulante en el curso específico | RA311 |
-| `PROMEDIO` | Promedio académico acumulado | UG305 |
-| `CARGA_ACTUAL` | Número de ramos inscritos este período | UG307 |
-| `EXPERIENCIA` | Semestres previos como ayudante aceptado | reportePostulaciones |
-| `TIPO_NUM` | Tipo de ayudantía (corrector, cátedra, lab, etc.) codificado | reportePostulaciones |
-
-### Configuración del modelo
-
-```python
-RandomForestClassifier(
-    n_estimators=200,
-    max_depth=6,
-    min_samples_leaf=5,
-    class_weight="balanced",  # compensa desbalance Aceptado/Rechazado
-    random_state=42,
-)
+### Score final (KPI 2, por postulante)
 ```
-
-### Métricas (validación cruzada 5-fold)
-
-| Métrica | Valor |
-|---|---|
-| CV Accuracy | 68.4% ± 3.3% |
-| CV ROC-AUC | 0.754 ± 0.011 |
-| Muestras de entrenamiento | 446 |
-| Aceptados / Rechazados | 300 / 146 |
-
-### Feature importances (aprendidas del modelo)
-
-| Variable | Importancia |
-|---|---|
-| Tipo de ayudantía | ~40% |
-| Promedio acumulado | ~21% |
-| Nota en el curso | ~17% |
-| Experiencia previa | ~14% |
-| Carga académica | ~8% |
-
-> El modelo descubrió que el **tipo de ayudantía** es el factor más predictivo, algo que los pesos fijos del modelo lineal original no capturaban.
+Score = w_nota·(Nota/7) + w_prom·(Promedio/7) + w_exp·norm(Exp) + w_ia·P_IA
+```
+Los pesos `w_*` los ajusta el profesor con sliders (suman 1 al renormalizar). Por defecto **la nota pesa más que el promedio**: `{nota: 0.40, promedio: 0.15, experiencia: 0.20, ia: 0.25}`.
 
 ---
 
 ## Lógica de decisión
 
-### Paso 1 — Filtros duros (no negociables)
-1. **Filtro de nota:** el postulante debe tener nota ≥ 4.0 en el curso exacto (MATERIA + CURSO en RA311). Si no cursó el ramo, queda descartado.
-2. **Filtro de horario:** se cruzan los bloques horarios del NRC objetivo (UG201) con los ramos inscritos del postulante (UG307). Si hay superposición, queda descartado.
+### Filtros duros
+1. **Nota:** el postulante debe tener nota ≥ **4.75** en el curso exacto (RA311). Si no cursó el ramo, queda descartado.
+2. **Horario (condicional al tipo):** el choque de horario descarta **solo** a los tipos que exigen asistencia presencial: `de Catedra`, `Laboratorio Tipo 1`, `Laboratorio Tipo 2`. Para `Corrector`, `Coordinador Tipo 1/2` y `Proyecto` el choque **no aplica**.
 
-### Paso 2 — Scoring con Random Forest
-Para los candidatos que pasan los filtros, el score es `P(Aceptado)` según el modelo entrenado. Se ordenan de mayor a menor y se presentan los top-N.
-
-### Paso 3 — Justificación automática
-Para cada candidato se genera un texto en español que menciona los 2-3 factores más relevantes de su perfil (nota, experiencia, promedio, carga).
+### Ranking y justificación
+Los elegibles se ordenan por score híbrido (top-N configurable). Para cada uno se genera una justificación en español que destaca los factores de mayor peso según los sliders del profesor.
 
 ---
 
-## KPIs medidos en la app
+## KPIs
 
-| KPI | Descripción | Objetivo |
-|---|---|---|
-| **TCA** — Tasa de Compatibilidad Académica | % de postulantes que pasan el filtro de nota | ≥ 90% |
-| **TCH** — Tasa de Conflicto Horario | % de postulantes con conflicto horario detectado | ≤ 2% |
-| Postulantes activos | Total con estado Pendiente o Aceptado para el NRC | — |
-| Candidatos elegibles | Postulantes que pasan ambos filtros duros | — |
+| KPI | Descripción |
+|---|---|
+| **KPI 1 — TCA** | % de candidatos recomendados que cumplen el filtro de nota (≥ 4.75) |
+| **KPI 2 — Score de recomendación** | El score híbrido por postulante (reemplaza al antiguo "Tiempo de Cierre") |
+| **KPI 3 — Conflicto horario** | Descartes por choque de horario, solo entre tipos con asistencia obligatoria |
 
 ---
 
-## Funcionalidades de la interfaz
+## Carga de datos (próximos semestres)
 
-- **Selector de NRC** en sidebar (solo NRCs con postulaciones activas)
-- **Slider** para elegir cuántos candidatos mostrar (1–10)
-- **Métricas del modelo** en sidebar: accuracy, ROC-AUC, muestras de entrenamiento
-- **Gráfico de feature importances** aprendidas por el Random Forest
-- **Tabla de ranking** con gradiente de color por score
-- **Cards expandibles** por candidato con métricas individuales y justificación
-- **Exportación a Excel** con 3 hojas: Ranking, Resumen KPI, Feature Importances
+La página **Cargar datos** permite subir los 5 CSV (reconocidos por código: RA311, UG201, UG305, UG307, reportePostulaciones), validando columnas. Los archivos se **guardan en disco** y persisten entre sesiones. Un botón **Limpiar** borra el set actual antes de cargar uno nuevo, evitando mezclar períodos. Tras cargar o limpiar, el modelo se re-entrena.
 
 ---
 
 ## Dependencias
 
 ```
-streamlit==1.35.0
+streamlit==1.39.0
 pandas==2.2.2
 openpyxl==3.1.2
 xlsxwriter==3.2.0
 scikit-learn==1.5.0
+pytest==8.2.0
 ```
 
 ---
 
 ## Limitaciones conocidas
 
-- El modelo se entrena con datos del período 202610. No hay datos de períodos anteriores para ampliar el conjunto de entrenamiento.
-- La nota del postulante en el curso se busca por coincidencia exacta de MATERIA+CURSO. Cursos equivalentes o renombrados no se detectan automáticamente.
-- Los pesos del modelo reflejan los criterios de selección históricos de los coordinadores, que pueden tener sesgos implícitos.
-- No hay integración directa con los sistemas académicos de la universidad (Proof of Concept).
+- El modelo se entrena con datos del período cargado; la señal de IA refleja criterios históricos de selección, que pueden tener sesgos.
+- La nota en el curso se busca por coincidencia exacta MATERIA+CURSO; cursos equivalentes no se detectan automáticamente.
+- El login es un POC: el RUT funciona como llave de filtrado, no como seguridad real.
+- No hay integración directa con los sistemas académicos de la universidad.
 
 ---
 
@@ -187,9 +139,7 @@ scikit-learn==1.5.0
 
 | Fecha | Cambio |
 |---|---|
-| 2026-05-15 | Implementación inicial: `data_loader.py`, `scoring.py` (pesos lineales fijos), `justification.py`, `app.py` |
-| 2026-05-15 | Reemplazo del scoring lineal por modelo Random Forest (`model.py`). Score = P(Aceptado). Métricas de CV y feature importances visibles en la app. |
-| 2026-05-15 | Creación de este documento (`README.md`) |
-| 2026-05-17 | Creación de guía de presentación (`PRESENTACION.md`) |
-| 2026-05-17 | Implementación de análisis retrospectivo (`analysis.py`). TCA real=61.7%, Top-1 match=83.5%, Top-3 match=96.5% sobre 85 NRCs históricos. Sección visible en la app y exportada al Excel. |
-| 2026-05-18 | Umbral `MIN_PASSING_GRADE` cambiado de 4.0 a **4.75**. TCA en app ahora se calcula sobre candidatos recomendados (siempre 100% por construcción). Indicador anterior renombrado a "Tasa de elegibilidad". TCA real histórico actualizado a 54.1%. |
+| 2026-05-15 | Implementación inicial y reemplazo del scoring lineal por Random Forest. |
+| 2026-05-17 | Guía de presentación y análisis retrospectivo. |
+| 2026-05-18 | Umbral `MIN_PASSING_GRADE` a 4.75. |
+| 2026-06-24 | **Ajustes por feedback del cliente:** score híbrido con pesos ajustables (nota > promedio), eliminación de `CARGA_ACTUAL`, KPI 2 = score por postulante, KPI 3 de horario condicional al tipo, app multipágina con login por profesor (RUT) y carga persistente de CSV con reset, arreglo de rutas, suite de tests pytest. |

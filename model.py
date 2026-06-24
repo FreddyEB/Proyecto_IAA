@@ -5,7 +5,7 @@ Label:
 1 = Aceptado 
 0 = Rechazado
 
-Features: NOTA_CURSO, PROMEDIO, CARGA_ACTUAL, EXPERIENCIA, TIPO_NUM
+Features: NOTA_CURSO, PROMEDIO, EXPERIENCIA, TIPO_NUM
 """
 
 import pandas as pd
