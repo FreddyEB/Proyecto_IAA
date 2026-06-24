@@ -53,10 +53,10 @@ def compute_ranking_accuracy(
     postulaciones: pd.DataFrame,
     notas: pd.DataFrame,
     promedios: pd.DataFrame,
-    carga: pd.DataFrame,
     horarios: pd.DataFrame,
-    ug307: pd.DataFrame,
+    ramos_inscritos: pd.DataFrame,
     model: RandomForestClassifier,
+    weights: dict = None,
 ) -> dict:
     """
     For each NRC with at least one Aceptado, runs the model ranking and checks
@@ -77,7 +77,9 @@ def compute_ranking_accuracy(
             postulaciones[(postulaciones["NRC"] == nrc) & (postulaciones["Estado"] == "Aceptado")]
             ["RUT"].astype(str)
         )
-        result = rank_candidates(nrc, postulaciones, notas, promedios, carga, horarios, ug307, model, top_n=5)
+        result = rank_candidates(nrc, postulaciones, notas, promedios,
+                                 horarios, ramos_inscritos, model,
+                                 weights=weights, top_n=5)
         if result.empty:
             continue
         eligible = result[result["FILTRO_NOTA"] & result["FILTRO_HORARIO"]]
