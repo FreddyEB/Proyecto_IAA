@@ -4,20 +4,24 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import streamlit as st
 from services import get_data, get_model
+from data_store import present_files
 
 if not st.session_state.get("_page_config_set"):
     st.set_page_config(page_title="Recomendación de Ayudantes", page_icon="🎓", layout="wide")
     st.session_state["_page_config_set"] = True
 
 
-# Datos disponibles en sesión para las vistas. Si faltan archivos (p. ej. tras
-# limpiar para recargar), no se crashea: se entra en modo bootstrap de carga.
-try:
-    st.session_state["_data"] = get_data()
-    _data_ok = True
-except FileNotFoundError:
-    st.session_state["_data"] = None
-    _data_ok = False
+# Solo se sale del modo carga cuando están los 5 archivos y cargan sin error.
+# Con un set incompleto NO se avanza al login (evita usar datos parciales/mezclados).
+st.session_state["_data"] = None
+_data_ok = False
+if all(present_files().values()):
+    try:
+        st.session_state["_data"] = get_data()
+        _data_ok = True
+    except Exception as e:  # archivo presente pero ilegible/corrupto
+        st.session_state["_data"] = None
+        st.session_state["_data_error"] = str(e)
 
 import views.login as login_view
 import views.upload as upload_view

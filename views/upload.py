@@ -16,6 +16,16 @@ def render():
         [{"Archivo": k, "Código": FILE_CODES[k], "Presente": "✅" if v else "❌"}
          for k, v in present.items()]))
 
+    faltan = [k for k, v in present.items() if not v]
+    if faltan:
+        st.warning(f"Faltan {len(faltan)} de {len(present)} archivos: **{', '.join(faltan)}**. "
+                   "Debes cargar los 5 para poder iniciar sesión.")
+    elif st.session_state.get("_data_error"):
+        st.error("Los 5 archivos están presentes, pero uno no se pudo leer: "
+                 f"{st.session_state['_data_error']}. Revisa el archivo y vuelve a subirlo.")
+    else:
+        st.success("✅ Los 5 archivos están cargados. Ya puedes iniciar sesión.")
+
     st.subheader("Limpiar datos")
     st.write("Mueve los archivos actuales a una carpeta de respaldo (reversible) antes de "
              "subir un set nuevo, para no mezclar períodos.")
