@@ -31,11 +31,39 @@ def render():
     selected_label = st.selectbox("Curso (NRC)", list(labels.values()))
     selected_nrc = [k for k, v in labels.items() if v == selected_label][0]
 
-    st.sidebar.markdown("### Importancia de variables")
-    w_nota = st.sidebar.slider("Nota en el curso", 0.0, 1.0, DEFAULT_WEIGHTS["nota"], 0.05)
-    w_prom = st.sidebar.slider("Promedio acumulado", 0.0, 1.0, DEFAULT_WEIGHTS["promedio"], 0.05)
-    w_exp = st.sidebar.slider("Experiencia previa", 0.0, 1.0, DEFAULT_WEIGHTS["experiencia"], 0.05)
-    w_ia = st.sidebar.slider("Señal del modelo (IA)", 0.0, 1.0, DEFAULT_WEIGHTS["ia"], 0.05)
+    st.sidebar.subheader(
+        "Importancia de variables",
+        help=(
+            "Cada variable define **cuánto pesa** ese criterio en el puntaje final "
+            "(SCORE) de cada candidato.\n\n"
+            "- El rango va de **0.00** (no se considera) a **1.00** (importancia máxima).\n"
+            "- Lo que importa es la **proporción** entre ellas: la app las normaliza para "
+            "que sumen 1. Por ejemplo, 0.40 y 0.20 equivale a 0.80 y 0.40.\n"
+            "- Subir una variable **baja la influencia relativa** de las demás. "
+            "Pon 0.00 en las que no te interesen."))
+    w_nota = st.sidebar.slider(
+        "Nota en el curso", 0.0, 1.0, DEFAULT_WEIGHTS["nota"], 0.05,
+        help=(
+            "Qué tan bien le fue al candidato en **este mismo ramo** (nota del curso en "
+            "RA311). Solo pasan el filtro quienes lo aprobaron con nota ≥ 4.75. Súbela si "
+            "quieres priorizar el dominio del contenido del curso."))
+    w_prom = st.sidebar.slider(
+        "Promedio acumulado", 0.0, 1.0, DEFAULT_WEIGHTS["promedio"], 0.05,
+        help=(
+            "**Promedio general acumulado** del alumno en toda su carrera (UG305). Mide el "
+            "rendimiento académico global, no solo en este ramo. Súbela para favorecer a los "
+            "mejores alumnos en general."))
+    w_exp = st.sidebar.slider(
+        "Experiencia previa", 0.0, 1.0, DEFAULT_WEIGHTS["experiencia"], 0.05,
+        help=(
+            "Número de **ayudantías que ya ha realizado** (postulaciones aceptadas en periodos "
+            "anteriores). Súbela para priorizar a quienes ya tienen experiencia ayudando."))
+    w_ia = st.sidebar.slider(
+        "Señal del modelo (IA)", 0.0, 1.0, DEFAULT_WEIGHTS["ia"], 0.05,
+        help=(
+            "Probabilidad estimada por el **modelo de IA (Random Forest)** de que el candidato "
+            "sea un buen ayudante, aprendida de selecciones históricas. Detecta patrones que no "
+            "se ven a simple vista. Súbela para confiar más en la recomendación automática."))
     weights = {"nota": w_nota, "promedio": w_prom, "experiencia": w_exp, "ia": w_ia}
     top_n = st.sidebar.slider("Candidatos a mostrar", 1, 20, 5)
 
@@ -70,6 +98,16 @@ def render():
     eligible.index += 1
     eligible["JUSTIFICACIÓN"] = eligible.apply(
         lambda r: generate_justification(r.to_dict(), weights, course_name), axis=1)
+
+    # Aviso cuando se pidieron más candidatos de los que cumplen los filtros.
+    # Si se mostraron menos que `top_n`, es que no hay truncamiento: estos son todos.
+    if len(eligible) < top_n:
+        descartados = total_post - len(eligible)
+        st.info(
+            f"Pediste mostrar **{top_n}** candidatos, pero solo hay **{len(eligible)}** que "
+            f"cumplen las condiciones para este curso (nota ≥ {MIN_PASSING_GRADE} en el ramo y "
+            f"sin choque de horario). De **{total_post}** postulaciones activas, **{descartados}** "
+            f"quedaron fuera por los filtros. Se muestran todos los disponibles.")
 
     display_cols = ["RUT", "TIPO_AYUDANTE", "NOTA_CURSO", "EXPERIENCIA", "PROMEDIO", "SCORE"]
     st.dataframe(eligible[display_cols].style.format(

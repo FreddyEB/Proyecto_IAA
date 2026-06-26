@@ -14,15 +14,47 @@ Sistema inteligente de recomendación de ayudantes para la Facultad de Ingenier�
 
 ## Cómo ejecutar
 
+> **Requisito:** Python **3.11 o 3.12**. No uses Python 3.14: rompe Streamlit
+> (`TypeError: Metaclasses with custom tp_new are not supported`).
+> Verifica tu versión con `python3 --version`.
+
+### Opción A — con entorno virtual (recomendado)
+
+Aísla las dependencias del proyecto para no instalarlas globalmente.
+
 ```bash
-cd ayudantes_mvp
+# 1. Crear el entorno virtual (una sola vez)
+python3.12 -m venv .venv
+
+# 2. Activarlo (cada vez que abras una terminal nueva)
+source .venv/bin/activate          # macOS / Linux
+# .venv\Scripts\activate           # Windows (PowerShell)
+
+# 3. Instalar dependencias (una sola vez, dentro del venv)
+pip install -r requirements.txt
+
+# 4. Ejecutar la app
+streamlit run app.py
+```
+
+Verás `(.venv)` al inicio del prompt cuando esté activo. Para salir del entorno: `deactivate`.
+
+### Opción B — sin entorno virtual
+
+Instala las dependencias en tu Python global (más simple, pero las mezcla con otros proyectos):
+
+```bash
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
-La app se abre en `http://localhost:8501`. La primera vez (sin datos) la app entra en **modo carga**: sube los 5 CSV desde la página *Cargar datos* y quedan guardados en el almacén del app (`ayudantes_mvp/app_data/`), que persiste entre sesiones. El app **solo** gestiona esa carpeta; nunca lee ni borra archivos fuera de ella.
+### Resultado
 
-Para correr los tests:
+La app se abre en `http://localhost:8501`. La primera vez (sin datos) entra en **modo carga**: sube los 5 CSV desde la página *Cargar datos* y quedan guardados en el almacén del app (`app_data/`), que persiste entre sesiones. El app **solo** gestiona esa carpeta; nunca lee ni borra archivos fuera de ella.
+
+### Tests
+
+Con el venv activo (o en tu Python global, según la opción elegida):
 
 ```bash
 python -m pytest -q
