@@ -33,6 +33,7 @@ elif "profesor" not in st.session_state:
     pg = st.navigation([st.Page(login_view.render, title="Ingreso", icon="🔑", url_path="login")])
 else:
     import views.ranking as ranking_view
+    import views.validation as validation_view
     with st.sidebar:
         st.markdown(f"**Profesor:** {st.session_state['profesor']['nombre']}")
         if st.button("Cerrar sesión"):
@@ -40,6 +41,7 @@ else:
             st.rerun()
     pg = st.navigation([
         st.Page(ranking_view.render, title="Mis cursos / Ranking", icon="📊", url_path="ranking"),
+        st.Page(validation_view.render, title="Validación / KPIs", icon="📈", url_path="validation"),
         st.Page(upload_view.render, title="Cargar datos", icon="📂", url_path="upload"),
     ])
 
