@@ -1,7 +1,7 @@
 # Resumen para el equipo — Qué hace la IA y qué cambió
 
 > Documento corto para entender el estado actual del MVP de recomendación de ayudantes.
-> Detalle técnico en `README.md`; diseño en `docs/superpowers/specs/` y plan en `docs/superpowers/plans/`.
+> Detalle técnico en `README.md`. Documentación de la entrega final en `docs/entrega_final/`.
 
 ---
 
